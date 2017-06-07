@@ -26,6 +26,9 @@ namespace CGL {
         Vector3D evaluate(double u, double v) const;
         
         // TODO Part 1 - add member variables?
+        Matrix4x4 bezierMatrixX;
+        Matrix4x4 bezierMatrixY;
+        Matrix4x4 bezierMatrixZ;
     };
 
 }

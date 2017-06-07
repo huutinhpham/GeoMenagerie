@@ -588,6 +588,7 @@ namespace CGL {
 
         Vector3D newPosition; ///< For Loop subdivision, this will be the position for the edge midpoint
         bool isNew; ///< For Loop subdivision, this flag should be true if and only if this edge is a new edge created by subdivision (i.e., if it cuts across a triangle in the original mesh)
+        bool flipped; //< For loop subdivision, this flag is true if the edge needs to be flip
 
         EdgeRecord record;
 

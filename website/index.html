@@ -9,48 +9,357 @@
       padding-left: 100px;  
     }  
   </style> 
-<title>Your Name  |  CS 184</title>
+<title>Huu Tinh Nguyen Pham  |  CS 184</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
 </head>
 <body>
 <br />
 <h1 align="middle">Assignment 2: GeoMenagerie</h1>
-    <h2 align="middle">Your Name</h2>
+    <h2 align="middle">Huu Tinh Nguyen Pham</h2>
 
     <div class="padded">
-        <p>Use this section to write an overview of the assignment. All of the text in your write-up should be <em>in your own words</em>. If you need to add additional HTML features to this document, you can search the <a href="http://www.w3schools.com/">http://www.w3schools.com/</a> website for instructions. To edit the HTML, you can just copy and paste existing chunks and fill in the text and image file names appropriately.</p>
-        <o>The website writeup is intended to be a self-contained walkthrough of the assignment: we want this to be a piece of work which showcases your understanding of relevant concepts through both mesh images as well as written explanations about what you did to complete each part of the assignment. Try to be as clear and organized as possible when writing about your own output files or extensions to the assignment. We want to understand what you've achieved and how you've done it!</p> 
-        <p>If you are well-versed in web development, feel free to ditch this template and make a better looking page. Just make sure that you include all the components as we've laid them out here. </p>
 
     <h2 align="middle">Part 1: Fun with Bezier Patches</h2>
-        <p>Describe what you did in Part 1. etc...</p>
-        <div align="left">
+        <p><b>Description:</b> For this part, what I did was first calculate all the math first before starting the code. Since we have 16 control points, or a 4 by 4 grid. Which means that it's efficient to move along a 3rd degree bezier curve. As shown by this slide: http://cs184.eecs.berkeley.edu/cs184_sp16/lecture/curves-surfaces/slide_066 with 16 control points we only need a b^33 calculation. Thus we can use the tensor product bezier patch, where m = 3 and n = 3. Thus when we decompose the summations into matrices we can get the following matrix multiplication to calculate the positions of the curve:</p>
+
+        <p align="middle"><pre align="middle">b(u, v) = U * A * P(n, m) * Atranspose * Vtranspose</pre></p>
+
+        <p>Where U is equals to:</p>
+        <p align="middle"><pre align="middle"> 1, u, u^2, u^3</pre></p>
+
+        <p>A is equals to:</p>
+        <p align="middle"><pre align="middle">  1, 0, 0, 0</pre></p>
+        <p align="middle"><pre align="middle"> -3, 3, 0, 0</pre></p>
+        <p align="middle"><pre align="middle">  3,-6, 3, 0</pre></p>
+        <p align="middle"><pre align="middle"> -1, 3,-3, 1</pre></p>
+
+        <P>P(n,m) is equals to: (Pij = controlpoint ith row, jth column)</P>
+        <p align="middle"><pre align="middle"> P00, P01, P02, P03</pre></p>
+        <p align="middle"><pre align="middle"> P10, P11, P12, P13</pre></p>
+        <p align="middle"><pre align="middle"> P20, P21, P22, P23</pre></p>
+        <p align="middle"><pre align="middle"> P30, P31, P32, P33</pre></p>
+
+        <p>ATranpose is the tranpose of the matrix A:</p>
+        <p align="middle"><pre align="middle">  1,-3, 3,-1</pre></p>
+        <p align="middle"><pre align="middle">  0, 3,-6, 3</pre></p>
+        <p align="middle"><pre align="middle">  0, 0, 3,-3</pre></p>
+        <p align="middle"><pre align="middle">  0, 0, 0, 1</pre></p>
+
+        <p>V is equals to:</p>
+        <p align="middle"><pre align="middle"> 1, v, v^2, v^3</pre></p>
+
+        <p>PREPROCESS: Thus all these calculations represents the calculation for bezier surface. With this first I used the preprocess function to calculate all the fixed calculations (the same doesn't matter the input) which includes A*P(n,m)*Atranspose. To do this I used the Matrix4x4 class, which takes in an array pointer of data (where data stores the 16 values of the matrix, from left to right, top to bottom). Thus I first constructed a data pointer for A, then three data pointers for P(n, m). The data pointer consists of the values shown above, while the three data pointers for P(n, m) consists of x, y, and z values for the 16 control points. Thus looping over all 16 control points, I extracted the values for x, y, z and store them in 3 different data arrays. With that I passed all the data into Matrix4x4 constructor to construct the matrices. With that using the given operators for Matrix4x4 (multiplication, and transpose) I calculated A*P(n, m)*Atranspose for each x, y, and z values of the control points. Thus at this point I have 3 Matrix4x4 each representing the calculation for the x value, y value, and z value. Since these are fixed, I stored them into a global varaible inside the header file called bezierMatrixX, bezierMatrixY, bezierMatrixZ.</p> 
+
+        <p>EVALUATE: With this I moved on to the evaluate function, where with a given u, v calculate the point on the bizer surface. Where u, and v represents the change/incrementation along the sides of the bezier surface. Thus first I create 2 Vector4D vectors to store the value of U and Vtranpose in the b(u, v) formula. To get the values for these vectors I simply plugged in the given u, v values into:</p>
+
+        <p align="middle"><pre align="middle">U = [1, u, u^2, u^3]</pre></p>
+        <p align="middle"><pre align="middle">V = [1, v, v^2, v^3]</pre></p>
+
+        <p>From the preprocess function I have x, y, z values for: A * P(n, m) * Atranspose. Thus I simply used the mutiplication operation to multiply each value matrix to the V vector, which produces 3 vectors. With those 3 vectors I used the dot product function to multiply the U vector with the 3 new vectors. The dot product would then produce a float, one for x, one for y, and one for z value. These 3 values are the xyz coordinates for the bezier point at a certain u, v</p>
+
+        <p>ADD2MESH: For this part we were requested with every 16 control points, we are required to make a bezier surface of 8x8 grid, or 9 by 9 points. Thus so I divided each side of the surface into 9. Since u, v represents the sampled values of each side (or the incrementation of each side) and we are trying to create a bezier surface with 9x9 points, I used the evaluate funxtion to calculate those 81 points, where u, v take equal steps of 1/8 from 0 to 1. Thus u, v = {0, 1/8, 2/8, ... , 7/8, 8,8}, which gives me a 9x9 uniformed u,v points or 8x8 uniformed grid. With that I plugged each individual u,v point into the evaluate function with 2 for loops. Those points are then stored into a 9x9 vector, after those calculations I'd have 81 xyz points representing a bezier surface. Which is then decomposed into triangles. Since we have 8x8 grid, each grid is then can be divided into 2 trianles (in specific way that was asked on the specs), which resulted into 128 triangles. These triangles are then added into the mesh.</p>
+
+        <p><b>Debug:</b> One of the major bug I had was that when subdiving the 8x8 grid into 81 uniform uv points, instead of using double for uv values {0, 1/8, 2/8, ... , 8/8} I used into, so the values were either 0 or 1 isntead of fraction. This led to a bezier surface of 2x2 instead of 8x8. This resulted in a very simplified teapot. To solve this I simplied used 8.0 instead of 8 in my code, which made a much better teapot. The second problem that I encountered in this problem is mixing up row and columns and indexing, which led to no output (no teapot), as well as an inside out teapot. To solve this I kept track of row and column on a piece of paper, and made sure everything was consistent.</p>
+
+        <p><b>Deliverables:</b></p>
+
+        <div align="middle">
             <table style="width=100%">
                 <tr>
                     <td align="middle">
-                    <img src="images/example_image.jpg" width="800px" />
-                    <figcaption align="middle">Results Caption: my mesh is the best mesh</figcaption>
+                    <img src="images/p1bugged(1).png" width="800px" />
+                    <figcaption align="middle">Results Caption: This shows the bug where instead of using double I used int for u,v which led to a very simplified teapot.</figcaption>
                 </tr>
             </table>
         </div>
-        <p>Here is an example of how to include a simple formula:</p>
-        <p align="middle"><pre align="middle">a^2 + b^2 = c^2</pre></p>
-        <p>or, alternatively, you can include an image of a LaTex formula.</p>
-        <p>This time it's your job to copy-paste in the rest of the sections :)</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p1bugged(2).png" width="800px" />
+                    <figcaption align="middle">Results Caption: This shows the bug where I swapped the row and column of the control points, which led to an inside teapot.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p1.png" width="800px" />
+                    <figcaption align="middle">Results Caption: After both bugged were detected and everything was fixed.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 2: Average normals for half-edge meshes</h2>
+        <p><b>Description:</b> For this part, first I constructed a new Vector3D n to keep the sum of the normals of neighboring faces. Since the cross product of two vectors gives the normal of the plane constructed by those vectors, I used this to calculate the normal of the faces. So what I did was first extract the current vertex that needs a new normal, to do this we can simply use the given halfedge and extract the vertex of that halfedge. Thanks to the construction of the data structure of halfedgemesh, the vertex of a halfedge is the root of that halfedge. I then extract the first neighboring vertex, by using a pointer h. h first points to our current halfedge, since halfedge->twin gives us a halfedge pointing into the opposite direction, knowing this I move the h pointer to h->twin(). Now if we extract the vertex of that halfedge, it would give us the vertex in the opposite side of the edge, we can use this as our first neighbor. Thus subtracting the two vertices will give us a vector representing the current edge. I then move on into the next neighbor by moving the pointer into h->next()->twin() (following the data structure), and extracting that halfedge vertex, which gives us the next neighbor. I then subtract that neighbor by our vertex, which gives us a 2nd vector. Finding the cross product of those two vectors would provide the normal of out first face constructed by out first three vertices. I then discard the first vector, keep the second, move on to the next neighbor. From there I calculate a new vector, find the cross product of that vector with the previous vector to find another normal of the next face. I do this until I reach the first neighbor, which means I have looped over all the faces! So all these normals are then added into our vector3D. The last thing I did was I normalize all these normal by using a build in function norm.</p>
+
+        <p><b>Debug:</b>Aside from syntax errors for this part I did not encounter any major bug! However, the major problem arises when I try to understand the data structure of the mesh. I simply drew everything out on paper and kept track of everything that way, which helped avoided any major bug.<p>
+
+        <p><b>Deliverables:</b></p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p2pre.png" width="800px" />
+                    <figcaption align="middle">Results Caption: This shows the teapot, where the vertices normal are not the average of the normal of the faces (before part 2). Teapot is very edgie, and not very smooth.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p2post.png" width="800px" />
+                    <figcaption align="middle">Results Caption: After part 2 is implement, since the vertices' normal are the average of the normal of the faces, the teapot edges are now gone.</figcaption>
+                </tr>
+            </table>
+        </div>
 
 
+     <h2 align="middle">Part 3: Edge Flip</h2>
+        <p><b>Description:</b>THE START OF POINTERS POINTERS POINTERS. For this part it's all about understanding the data structure of the mesh file, as well as keep track of pointers. So first before anything else I started with an INITIALIZATION phrase, what I did was I extracted every objects within the 2 triangles that plays a role in the flipping of the edges. This included all the 6 halfedges within the two triangles (h, h->twin(), h->next(), h->next()->next(), etc) where h is the halfedge of the edge (e0) being flipped. [FOR PART 5 DEBUG I ALSO EXTRACTED 4 VERTICES IN THE 2 TRIANGLES (but it didnot create major bugs for part 3)]. I then extracted the 2 faces of the two triangles (h->face(), h->twin()->face()). The second phrase for this part was the REASSIGNMENT phrase. For this I used the setneighbors function within the halfedge class. After drawing out the before and after pictures of the triangles, I simply went over all the 6 halfedges, without constructing any new object, I set the new neighbors for each individual halfedge according to the picture I drew out. I then stuck the h->face() onto the h halfedge, like with with h->twin()->face(). Lastly is sticking the 4 vertices into the 4 halfedges accordingly.</p>
 
-    <h2 align="middle">A Few Notes On Webpages</h2>
-        <p>Here are a few problems students have encountered in the past. You will probably encounter these problems at some point, so don't wait until right before the deadline to check that everything is working. Test your website on the instructional machines early!</p>
-        <ul>
-        <li>Your main report page should be called index.html.</li>
-        <li>Be sure to include and turn in all of the other files (such as images) that are linked in your report!</li>
-        <li>Use only <em>relative</em> paths to files, such as <pre>"./images/image.jpg"</pre>
-        Do <em>NOT</em> use absolulte paths, such as <pre>"/Users/student/Desktop/image.jpg"</pre></li>
-        <li>Pay close attention to your filename extensions. Remember that on UNIX systems (such as the instructional machines), capitalization matters. <pre>.png != .jpeg != .jpg != .JPG</pre>
-        <li>Be sure to adjust the permissions on your files so that they are world readable. For more information on this please see this tutorial: <a href="http://www.grymoire.com/Unix/Permissions.html">http://www.grymoire.com/Unix/Permissions.html</a></li>
-        <li>And again, test your website on the instructional machines early!</li>
+        <p><b>Debug:</b> For this part the major bug I got was not using the setneighbors function. Thus I simply reassigned everything everything using the equals sign. Due to this I only worked with the half edges, and forgot about the faces of the two trangles. As the result when flipping, which changing the pointers of the face, and the halfedges to the faces, I started to lose the faces of the triangles as I flipped. To solve this I simplied used the setneighbors function, as well as sticking the face back to either h, or h->twin() so that the faces are consistent with the edge flip.</p>
+
+        <p><b>Deliverables:</b><p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p3bugged.png" width="800px" />
+                    <figcaption align="middle">Results Caption: this shows the bug where I did not keep track of the faces as well as the halfedges! Thus the faces started to disappeared.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p3.png" width="800px" />
+                    <figcaption align="middle">Results Caption: After both the faces, and the half edges were correctly reassigned!</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p3pre.png" width="800px" />
+                    <figcaption align="middle">Results Caption: simple example of the preflipped cube</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p3post.png" width="800px" />
+                    <figcaption align="middle">Results Caption: after the flip function for a simple example</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 4: Edge Split</h2>
+        <p><b>Description:</b>Similar to part 3, this part consists of a lot of reassignment. However in addition, since we are splitting two triangles into 4, new objects needed to be made. Thus for this part to keep everything organized I divided into three subparts. First the INITIALIZATION part, where I extract everything that's given. then the CREATION part, where I create any new object that is needed to be made. Lastly is the REASSIGNMENT part, where I reassigned all the objects' pointers accordingly. So for the first part given an edge, if the edge is not on the boundary, I first extract that edge halfedge, h. With this halfedge I can extract the other 2 halfedges of the same triangle, as well as the other three half edges of the opposite triangle. I then extracted the two faces of the two triangles, as well as the four vertices according to the data structure of the mesh. For the second phrase, since we are making two new triangles, one can see that we need 6 more halfedges, 3 per triangle. We would need two new faces, one for each triangle, as well as three new edges since our one edge in the center will be split into 4. Thus I used newEdge(), newVertex(), newFace, etc to create these objects. The most important object creation was the new vertex, midPoint, or the center vertex of the four triangles. To create this first I call the constructor for the new vertex, then I assigned it's halfedge to be h, and h->vectex() should now be pointing to this new vertex. To calculate the position for this new vertex, I simply used the two vertices of the edge where this vertex is sitting, and simply used the midpoint formula to calculate its position. The last part was the REASSIGNMENT part. for this part I drew out the before and after pictures for the triangles, then I simply step over each halfedge using the setNeighbors function set the pointers according to the picture. I also set the halfedges to the faces, edges accordingly.</p>
+
+        <p><b>Debug:</b>One bug for this problem was that instead of using the newVertex() to create new vertices I used the VertexIter() constructor, which resulted in multiple segmentation fault. Additionally, the major problem was segfaults due to incorrect assignments of pointers as well as missing faces. To solve this I simply had to step over each line over and over to make sure all pointers are pointing to the correct object, as well as rewriting the code several times. The biggest problem I had was once again with the faces, where I disregard the pointer from the side halfedge to the faces, I forgot to reassign the faces of those side halfedges, which ultimately resulted in missing face. Aside of pointer debugging, and syntax debug, there was no other problems.</p>
+
+        <p><b>Deliverables:</b><p>
+        
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4bugged.png" width="800px" />
+                    <figcaption align="middle">Results Caption: Similar to part 3, I forgot to reassign the pointer to the faces of the halfedges on the outside of the two triangles, resulting in missing faces.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4.png" width="800px" />
+                    <figcaption align="middle">Results Caption: Final result, where all the bugs are fixed.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 5: Upsampling via Loop Subdivision</h2>
+        <p><b>Description:</b>For this part, I followed the recipe that was given inside the spec. Thus breaking it into different parts:<p>
+
+        <p>Part 1/Part 2: I first iterate over every vertices within the mesh, first setting all the isNew bools of all the vertices to false. At the same time I calculate the new position of the current vertex. To do this first, I extract the position of the current vertex by calling ->position. I then iterate over all the neighboring vertices of that vertex (using the same method as part2 when calculating the normal vectors of neighboring faces) and add their position for a neighborSum vector, which keeps track of the sum of the position of all the neighboring vertices. I also kept track of the number of neighboring vertices of the current vertex, by adding 1 to numNeighbors variable within each loop iteration. Lastly is using the formula on the spec to calculate the new position. By first calculating the value of u, u = 3/8*Numneighbors, or 3/16 if numNeighbors = 3. The new position is then calculated using the formula below, which is then stored into the vector3D within the vertex called newPosition.</p>
+
+        <p align="middle"><pre align="middle"> (1 - numNeighbors*u)*originalPosition + u*neighborSum</pre></p>
+
+        <p>Part 3: I then iterate over all the edges setting isNew to all those edges to false. As well as calculating the position for a vertex in the midpoint of that edge, which is later used to split. To do this I extracted the 4 vertices around that edge (topV, botV, rightV, and leftV) relative to their positions by using  drawing and stepping through the pointers. The position for the new midpoint vertex is then calculated using the formula below and is stored into the newPosition inside the current edge.</p>
+
+        <p align="middle"><pre align="middle"> 3/8*(leftVertex + rightVertex) + 1/8*(topVertex + botVertex)</pre></p>
+
+        <p>Part 4: In this part I step over every edges and splitting them in any order. Recall that all the original edges isNew is set to false. So first I check to make sure that the edge is in the original mesh, or isNew is false, and call splitEdge on that edge. After splitting that edge, all the newly created edge will have its isNew set to true. The reason for this is because we only want to split an edge once. Additionally since the splitedge function returns a vertexIter, or the midpoint, thus now is a good time to set the newPosition of the midpoint of that edge (stored inside newPosition inside the edge) to the newPosition inside the return vertex, the midpoint.
+
+        <p>Part 5: By this point all the new positions are calculated, thus I no longer needed the values of the oldpositions of the old mesh. Thus I iterate over all the vertices, including the newly created ones and set its position to its newPosition</p>
+
+        <p>Part 6: The last part is to flip accordingly to the instruction. To know which edge is to be flipped I made a new boolean called flipped inside the edge class. This bool indicates whether the edge need to be flip to create the wanted subdivison. I set the bool to false in (PART 3), then as I split the edges in part 4, if an edge along a newly created edge that is pointing to an old, and a new vertex (using isNew bool in the vertices to differentiate) then I set flipped to true. Lastly is that I iterate over the edges once again, checking if the flipped bool is true, if it's true then I call flipEdge on that edge to flip it to the correct positions</p>
+
+        <p><b>Debug:</b>there were three main bugs that I encountered in this part. One is due to bugs in part 3, one is due to bug in part 4, and last one is due to a bug in part 5. The bug I encountered in this part that was due to part 3 was that the vertices' halfedges were not reassigned after the flip function. Since part 3 seems to work without reassign vertices I didn't notice the bug until this part. Due to this there were holes, and dent inside my mesh object. To fix this I simply went back to part 3, and reassigned the halfedges. The second bug was in part 4, This bug is because I forgot to reattach newly created faces to the halfedges on the edges of part 4. To fix this, I used frustrations, lots of stepping, rewriting pointers, code, and drew multiple triangles. Finally with some patience, I rewrote the code one last time paying close attention to all pointers I was able to fixed the problem. The last major bug is due to a part 5. The bug consists of using interger instead of floats. When calculating the new positions of the newly made vertices, as well as the old vertices instead of using floats I used interger. As the result, all my vertices were porjected into the nearest integer (generated a really cool image in my opinio).</p>
+
+        <p>Deliverables:</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p5bugged3.png" width="800px" />
+                    <figcaption align="middle">Results Caption: there were dent in this object because I was reassginment the vertices' halfedges incorrectly in part 3 flip function</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p5fixed3.png" width="800px" />
+                    <figcaption align="middle">Results Caption: After fixing the bug in part 3</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p5bugged4.png" width="800px" />
+                    <figcaption align="middle">Results Caption: due to part 4 bug, where faces of the outside halfedges were not assigned correctly. The reason I didnt detect in part 4 because it needed many split to detect.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p5bugged5.png" width="800px" />
+                    <figcaption align="middle">Results Caption: The bug where I used int to calculate the new positions of the vertices instead of float. Thus all the vertices were moved to the nearest integers.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 6: Fun with Shaders</h2>
+        <p><b>Description:</b>for this part I follow the fragment shader section of the GLSL tutorial, as well as the slides.</p>
+
+        <p>Phong: First I created a vec3(255, 0 , 0) lightColor to make my shader red. Then I set the ambientTerm to 0.1 (after some adjustments). Find the normal vector by calling normalize(normal), find the vector from vertex to the light by calling normalize(lightPos - vertex). Since subtraction of two points gives a vector, and we want a vector from the light position to the current vertex. Similarly I calculated the vector to the eye using eyePos, and vertex. With all these variables in place, I followed the formulas given in the lecture slides to calculate the diffuse, and specular term. Lastly is adding all three term, ambient, diffuse, and specular with the color to generate a shading.</p> 
+
+        <p>Environment Reflection: First is to normalize the normal. I then find the reflection direction from the eye, whatever reflection for a certain vertex is, will be what we will see for that vertex. To do this I used the given formula on the spec: 2*(n * l)*n - l, where n is the normal vector of that vertex, and l is the vector from the eyePos to the vertex. I then converted the reflection direction into spherical coordinate, there theta = arctan(x/y) and phi = arctan(sqrt(x^2 + y^2)/z) where x, y , and z are the cartient coordinate of the reflection direction. Lastly is I calculated the uv vector using phi and theta (following the specs), and pass that into texture2D along with envmap</p>
+
+        <p><b>Debug:</b>It was very difficult to debug for this part since there's no indication of there the bugs are. But what I discovered was that if the code did not compile the teapot would be completely blue. Thus to debug this I simply commented out line by line, then uncommented each line, if the teapot turns from cream-ish color to blue I know there was a bug in that line. For the phong part, there wasn't much bug there was just a lot of adjustment to get the teapot to the color that is a good representation of the shading, so I just multiplied each term but a float 0 < float < 1 until I get the shade I wanted. As for the other part, I encountered my best friend int-float bug. Instead of using a float I used an int, for some weird reason it didnot compile when I used an int, but it worked when I used a float.<p>
+
+        <p>Deliverables:</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p6bugged1.png" width="800px" />
+                    <figcaption align="middle">Results Caption: whenever the frag file didnot compile, the color of the teapot would be this color, help indicating where I made a mistake in part 6. If everything compiles the color of the teapot would be white-ish</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p6phongpre.png" width="800px" />
+                    <figcaption align="middle">Results Caption: The teapot before much adjustment of the 3 terms, one side looks too bright.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p6phongpost.png" width="800px" />
+                    <figcaption align="middle">Results Caption: after some adjustment to all the terms, what I came up with that shows a good representation of a phong shading of a teapot</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p6env.png" width="800px" />
+                    <figcaption align="middle">Results Caption: teapot where environment is taken into account, using the reflection direction to indicate where each vertex is reflect to and from.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 7: Design your own mesh!</h2>
+        <p><b>Description:</b>For this part, after learning the blender program I constructed a simple house. Due to inexperience with the program and time constraint I did what I could. Below are the dae files that I constructed. The first picture is the final house that I was able to construct before any upsampling. The second picture is the house with upsampling, when everything is smooths out.</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p8(1).png" width="800px" />
+                    <figcaption align="middle">Results Caption: before any upsampling.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p8(2).png" width="800px" />
+                    <figcaption align="middle">Results Caption: after some upsampling.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p8(3).png" width="800px" />
+                    <figcaption align="middle">Results Caption: with shading option on</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p8(4).png" width="800px" />
+                    <figcaption align="middle">Results Caption: with phong shading</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p8(5).png" width="800px" />
+                    <figcaption align="middle">Results Caption: with environmental reflection</figcaption>
+                </tr>
+            </table>
+        </div>
+
 </div>
 </body>
 </html>
