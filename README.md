@@ -8,7 +8,7 @@ This projects renders 3D objects by using triangle mesh, and half-edges. The cur
 
 ### Follow the link for full explanation of the methods made by me
 
-[CLICK ME FOR DOCUMENTATIONS](http://54.241.219.178/projects/GeoMenagerie)
+[CLICK ME FOR DOCUMENTATIONS](http://huutinhpham.com/projects/GeoMenagerie)
 
 ##### Credit
 
